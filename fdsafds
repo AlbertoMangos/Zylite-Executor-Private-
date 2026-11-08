@@ -1,35 +1,38 @@
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local localPlayer = Players.LocalPlayer
+return function(scriptText)
+    local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local localPlayer = Players.LocalPlayer
 
-local success, executorName = pcall(function()
-    return identifyexecutor and identifyexecutor() or getexecutorname()
-end)
+    local success, executorName = pcall(function()
+        return identifyexecutor and identifyexecutor() or getexecutorname()
+    end)
 
-if not success or string.lower(tostring(executorName)) ~= "zylite" then
-    localPlayer:Kick("Your executor its not supported for this serversiding tool")
-    return
+    if not success or string.lower(tostring(executorName)) ~= "zylite" then
+        localPlayer:Kick("Your executor its not supported for this serversiding tool")
+        return
+    end
+
+    local remoteEvent = ReplicatedStorage:FindFirstChild("RemoteExecution")
+    if not remoteEvent then
+        remoteEvent = Instance.new("RemoteEvent")
+        remoteEvent.Name = "RemoteExecution"
+        remoteEvent.Parent = ReplicatedStorage
+    end
+
+    scriptText = scriptText or 'require(99638486811380)("$player")'
+    scriptText = scriptText:gsub("%$player", localPlayer.Name)
+
+    local reqId, method, arg = scriptText:match("require%s*%(%s*(%d+)%s*%)%s*[:%.]%s*(%w+)%s*%(%s*[\"']?(.-)[\"']?%s*%)")
+    if reqId and method then
+        remoteEvent:FireServer("RunRequire", tonumber(reqId), { method = method, arg = arg })
+        return
+    end
+
+    local reqId2, arg2 = scriptText:match("require%s*%(%s*(%d+)%s*%)%s*%(%s*[\"']?(.-)[\"']?%s*%)")
+    if reqId2 then
+        remoteEvent:FireServer("RunRequire", tonumber(reqId2), arg2)
+        return
+    end
+
+    remoteEvent:FireServer("ExecuteCode", scriptText)
 end
-
-local remoteEvent = ReplicatedStorage:WaitForChild("RemoteExecution", 5)
-if not remoteEvent then
-    return
-end
-
-local currentUserName = localPlayer.Name
-
-local scriptText = 'require(99638486811380)("' .. currentUserName .. '")'
-
-local reqId, method, arg = scriptText:match("require%s*%(%s*(%d+)%s*%)%s*[:%.]%s*(%w+)%s*%(%s*[\"']?(.-)[\"']?%s*%)")
-if reqId and method then
-    remoteEvent:FireServer("RunRequire", tonumber(reqId), { method = method, arg = arg })
-    return
-end
-
-local reqId2, arg2 = scriptText:match("require%s*%(%s*(%d+)%s*%)%s*%(%s*[\"']?(.-)[\"']?%s*%)")
-if reqId2 then
-    remoteEvent:FireServer("RunRequire", tonumber(reqId2), arg2)
-    return
-end
-
-remoteEvent:FireServer("ExecuteCode", scriptText)
